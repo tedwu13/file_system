@@ -4,7 +4,7 @@
 // This header allows your project to link against the reference library. If you
 // complete the entire project, you should be able to remove this directive and
 // still compile your code.
-#include "reference_implementation.h"
+// #include "reference_implementation.h"
 
 // Definitions for ext2cat to compile against.
 #include "ext2_access.h"
@@ -101,36 +101,6 @@ struct ext2_inode * get_root_dir(void * fs) {
 // name should be a single component: "foo.txt", not "/files/foo.txt".
 __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
         char * name) {
-
-    // int i;
-    // __u32* blocks = dir->i_block;
-    // __u32 block_size = get_block_size(fs);
-    //
-    // void* current_block;
-    // void* current_block_ptr;
-    // void* end_block_ptr;
-    // struct ext2_dir_entry_2* current_dir;
-    //
-    // for(i = 0; i < 12; i++)
-    // {
-    //     current_block = get_block(fs, blocks[i]);
-    //     current_block_ptr = current_block;
-    //     current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
-    //     end_block_ptr = current_block + block_size;
-    //
-    //     while (current_block_ptr <= end_block_ptr && current_dir->rec_len)
-    //     {
-    //         current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
-    //
-    //         if (strncmp(name, current_dir->name, current_dir-> name_len) == 0)
-    //             return current_dir->inode;
-    //         else
-    //             current_block_ptr += current_dir->rec_len;
-    //     }
-    // }
-    //
-    // return 0;
-
     // inodes per block is in the superblock
     int num_inode = get_super_block(fs)->s_inodes_per_group;
 
@@ -147,7 +117,7 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
         }
 
         // this is the inode we want
-        if (strlen(name) == (unsigned char)(entry->name_len) && strncmp(name, entry->name, strlen(name)) == 0))
+        if (strlen(name) == (unsigned char)(entry->name_len) && strncmp(name, entry->name, strlen(name)) == 0)
         {
             return entry->inode;
         }
@@ -159,33 +129,45 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
 
     // unable to Find
     return 0;
-    
+
 }
 
 
 // Find the inode number for a file by its full path.
 // This is the functionality that ext2cat ultimately needs.
 __u32 get_inode_by_path(void * fs, char * path) {
-
-    char* ch;
-    int count = 0; // slash count
-
-    for(ch = path; ch != NULL; ch = strchr(ch + 1, '/'))
-        count++;
-
-    int i, res;
     char** paths = split_path(path);
-    struct ext2_inode* root = get_root_dir(fs);
 
-    for(i = 0; i < count; i++)
+    // root inode
+    __u32 inode_num = EXT2_ROOT_INO;
+
+    // iterate through the subdirectories
+    for (char** path = paths; *path != NULL; path++)
     {
-        res = get_inode_from_dir(fs, root, paths[i]);
+        // get inode
+        struct ext2_inode* inode = get_inode(fs, inode_num);
 
-        if (res != 0)
-            root = get_inode(fs, res);
-        else
+        // if not directory, we're at the file we want
+        if (!LINUX_S_ISDIR(inode->i_mode))
+        {
             break;
+        }
+
+        // get inode num from path
+        inode_num = get_inode_from_dir(fs, inode, *path);
+        if (inode_num == 0)
+        {
+            break;
+        }
     }
 
-    return res;
+    // if inode num doesn't change, then file wasn't found
+    if (inode_num == EXT2_ROOT_INO)
+    {
+        return 0;
+    }
+    else
+    {
+        return inode_num;
+    }
 }
