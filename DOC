@@ -1,0 +1,39 @@
+Michael Wang and Ted Wu
+Lab #4: Filesystems
+
+A breakdown of our work:
+
+get_super_block(void* fs)
+This is trivial, as the superblock offset is predefined.
+
+get_block_size(void* fs)
+This calls the system function EXT2_BLOCK_SIZE() on the superblock to return the block size.
+
+get_block(void* fs, __u32 block_num)
+Returns a pointer to a block. Simply the fs pointer plus the block size * block number, which we get from our previous functions.
+
+get_block_group(void* fs, __u32 block_group_num)
+Returns a pointer to the block group. It follows the superblock.
+
+get_inode(void* fs, __u32 inode_num)
+Returns a pointer to an inode. We get the inode table with get_block_group(), then offset the address by the inode num.
+Subtract 1, because inodes start with 1.
+
+get_inode_from_dir(void* fs, struct ext2_inode* dir, char* name)
+Given the inode for a directory and a filename, return the inode number, if it exists.
+First we get the number of inodes in a group, and then we iterate to look for the folder.
+
+get_inode_by_path(void* fs, char* path)
+Find the inode number for a file using it's path. We use get_inode_from_dir until we no longer have a folder, where we return the file.
+
+We did not attempt the extra credit.
+
+We can verify that our md5 hashes match what they should:
+file                                md5sum
+/code/ext2_headers/ext2_types.h     730cc429e8d0ab183380ab14f51f2912
+/code/haskell/qsort.hs              a7b79363f8645e4722a5d3d114311709
+/code/python/ouroboros.py           ecd524e78b381b63df3d4bfcf662ce0d
+/photos/cows.jpg                    3f19778ecb384018ea53869313023d8b
+/photos/corn.jpg                    dc049b1372bf3a6a1aea17be9eca5532
+/photos/loons.jpg                   96a1f79091ef9eacc621d2495246043a
+/README.txt                         c092359845cf0c2859ea9a532b7764ca

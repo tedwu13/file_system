@@ -50,6 +50,8 @@ struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
     struct ext2_group_desc* desc = get_block_group(fs, 0);
     __u32 inode_table_block = desc->bg_inode_table;
     struct ext2_inode* inode_table = get_block(fs, inode_table_block);
+
+    // get inode number
     return inode_table + inode_num - 1;
 }
 
