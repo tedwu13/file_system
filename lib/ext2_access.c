@@ -17,7 +17,7 @@
 
 // Return a pointer to the primary superblock of a filesystem.
 struct ext2_super_block * get_super_block(void * fs) {
-    return (struct ext2_super_block *) (fs + SUPERBLOCK_OFFSET);
+    return fs + SUPERBLOCK_OFFSET;
 }
 
 
@@ -38,7 +38,7 @@ void * get_block(void * fs, __u32 block_num) {
 // ext2 filesystems will have several of these, but, for simplicity, we will
 // assume there is only one.
 struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
-    return (struct ext2_group_desc *) get_block(fs, 2); // only one group, not using second arg
+    return (struct ext2_group_desc *) (fs + SUPERBLOCK_OFFSET + SUPERBLOCK_SIZE);
 }
 
 
@@ -46,9 +46,11 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // would require finding the correct block group, but you may assume it's in the
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
-    struct ext2_super_block* super = get_super_block(fs);
-    void* table = get_block(fs, get_block_group(fs, 0)->bg_inode_table);
-    return table + ((inode_num - 1) * super->s_inode_size);
+    // get inode table
+    struct ext2_group_desc* desc = get_block_group(fs, 0);
+    __u32 inode_table_block = desc->bg_inode_table;
+    struct ext2_inode* inode_table = get_block(fs, inode_table_block);
+    return inode_table + inode_num - 1;
 }
 
 
@@ -95,9 +97,9 @@ struct ext2_inode * get_root_dir(void * fs) {
 
 // Given the inode for a directory and a filename, return the inode number of
 // that file inside that directory, or 0 if it doesn't exist there.
-// 
+//
 // name should be a single component: "foo.txt", not "/files/foo.txt".
-__u32 get_inode_from_dir(void * fs, struct ext2_inode * dir, 
+__u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
         char * name) {
 
     int i;
@@ -120,7 +122,7 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
         {
             current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
 
-            if (strncmp(name, current_dir->name, current_dir-> name_len) == 0) 
+            if (strncmp(name, current_dir->name, current_dir-> name_len) == 0)
                 return current_dir->inode;
             else
                 current_block_ptr += current_dir->rec_len;
