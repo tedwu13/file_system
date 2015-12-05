@@ -102,35 +102,64 @@ struct ext2_inode * get_root_dir(void * fs) {
 __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
         char * name) {
 
-    int i;
-    __u32* blocks = dir->i_block;
-    __u32 block_size = get_block_size(fs);
+    // int i;
+    // __u32* blocks = dir->i_block;
+    // __u32 block_size = get_block_size(fs);
+    //
+    // void* current_block;
+    // void* current_block_ptr;
+    // void* end_block_ptr;
+    // struct ext2_dir_entry_2* current_dir;
+    //
+    // for(i = 0; i < 12; i++)
+    // {
+    //     current_block = get_block(fs, blocks[i]);
+    //     current_block_ptr = current_block;
+    //     current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
+    //     end_block_ptr = current_block + block_size;
+    //
+    //     while (current_block_ptr <= end_block_ptr && current_dir->rec_len)
+    //     {
+    //         current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
+    //
+    //         if (strncmp(name, current_dir->name, current_dir-> name_len) == 0)
+    //             return current_dir->inode;
+    //         else
+    //             current_block_ptr += current_dir->rec_len;
+    //     }
+    // }
+    //
+    // return 0;
 
-    void* current_block;
-    void* current_block_ptr;
-    void* end_block_ptr;
-    struct ext2_dir_entry_2* current_dir;
+    // inodes per block is in the superblock
+    int num_inode = get_super_block(fs)->s_inodes_per_group;
 
-    for(i = 0; i < 12; i++)
+    // entry point to inode table
+    struct ext2_dir_entry * entry = (struct ext2_dir_entry*)(get_block(fs, dir->i_block[0]));
+
+    int counter = 0;
+    while (counter < num_inode)
     {
-        current_block = get_block(fs, blocks[i]);
-        current_block_ptr = current_block;
-        current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
-        end_block_ptr = current_block + block_size;
-
-        while (current_block_ptr <= end_block_ptr && current_dir->rec_len)
+        // unused entries
+        if (entry->inode == 0)
         {
-            current_dir = (struct ext2_dir_entry_2 *) current_block_ptr;
-
-            if (strncmp(name, current_dir->name, current_dir-> name_len) == 0)
-                return current_dir->inode;
-            else
-                current_block_ptr += current_dir->rec_len;
+            continue;
         }
+
+        // this is the inode we want
+        if (strlen(name) == (unsigned char)(entry->name_len) && strncmp(name, entry->name, strlen(name)) == 0))
+        {
+            return entry->inode;
+        }
+
+        // otherwise, move on
+        entry = (struct ext2_dir_entry*) (((void*) entry) + entry->rec_len);
+        counter++;
     }
 
+    // unable to Find
     return 0;
-
+    
 }
 
 
